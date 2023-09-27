@@ -18,6 +18,7 @@ import (
 
 	"github.com/cilium/ebpf/rlimit"
 
+	"github.com/cilium/cilium/pkg/datapath/fake"
 	dpdef "github.com/cilium/cilium/pkg/datapath/linux/config/defines"
 	"github.com/cilium/cilium/pkg/datapath/loader"
 	datapath "github.com/cilium/cilium/pkg/datapath/types"
@@ -91,7 +92,9 @@ func writeConfig(c *C, header string, write writeFn) {
 	}
 	for _, test := range tests {
 		c.Logf("  Testing %s configuration: %s", header, test.description)
-		cfg := &HeaderfileWriter{}
+		cfg := &HeaderfileWriter{
+			bwmgr: &fake.BandwidthManager{},
+		}
 		c.Assert(write(test.output, cfg), test.expResult)
 	}
 }
@@ -342,7 +345,7 @@ func TestWriteNodeConfigExtraDefines(t *testing.T) {
 	cfg := HeaderfileWriter{nodeExtraDefineFns: []dpdef.Fn{
 		func() (dpdef.Map, error) { return dpdef.Map{"FOO": "0x1", "BAR": "0x2"}, nil },
 		func() (dpdef.Map, error) { return dpdef.Map{"BAZ": "0x3"}, nil },
-	}}
+	}, bwmgr: &fake.BandwidthManager{}}
 
 	buffer.Reset()
 	require.NoError(t, cfg.WriteNodeConfig(&buffer, &dummyNodeCfg))
@@ -355,7 +358,7 @@ func TestWriteNodeConfigExtraDefines(t *testing.T) {
 	// Assert that an error is returned when one extra define function returns an error
 	cfg = HeaderfileWriter{nodeExtraDefineFns: []dpdef.Fn{
 		func() (dpdef.Map, error) { return nil, errors.New("failing on purpose") },
-	}}
+	}, bwmgr: &fake.BandwidthManager{}}
 
 	buffer.Reset()
 	require.Error(t, cfg.WriteNodeConfig(&buffer, &dummyNodeCfg))
@@ -364,7 +367,7 @@ func TestWriteNodeConfigExtraDefines(t *testing.T) {
 	cfg = HeaderfileWriter{nodeExtraDefineFns: []dpdef.Fn{
 		func() (dpdef.Map, error) { return dpdef.Map{"FOO": "0x1", "BAR": "0x2"}, nil },
 		func() (dpdef.Map, error) { return dpdef.Map{"FOO": "0x3"}, nil },
-	}}
+	}, bwmgr: &fake.BandwidthManager{}}
 
 	buffer.Reset()
 	require.Error(t, cfg.WriteNodeConfig(&buffer, &dummyNodeCfg))
@@ -380,6 +383,7 @@ func TestNewHeaderfileWriter(t *testing.T) {
 	_, err := NewHeaderfileWriter(configWriterParams{
 		NodeExtraDefines:   []dpdef.Map{a, a},
 		NodeExtraDefineFns: nil,
+		BandwidthManager:   &fake.BandwidthManager{},
 	})
 
 	require.Error(t, err, "duplicate keys should be rejected")
@@ -387,6 +391,7 @@ func TestNewHeaderfileWriter(t *testing.T) {
 	cfg, err := NewHeaderfileWriter(configWriterParams{
 		NodeExtraDefines:   []dpdef.Map{a},
 		NodeExtraDefineFns: nil,
+		BandwidthManager:   &fake.BandwidthManager{},
 	})
 	require.NoError(t, err)
 	require.NoError(t, cfg.WriteNodeConfig(&buffer, &dummyNodeCfg))
