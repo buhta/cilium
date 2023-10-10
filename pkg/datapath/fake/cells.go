@@ -4,14 +4,13 @@
 package fake
 
 import (
-	"time"
-
 	"github.com/cilium/cilium/pkg/datapath/tables"
 	"github.com/cilium/cilium/pkg/datapath/types"
 	"github.com/cilium/cilium/pkg/hive/cell"
 	"github.com/cilium/cilium/pkg/maps/authmap"
 	"github.com/cilium/cilium/pkg/maps/egressmap"
 	"github.com/cilium/cilium/pkg/maps/signalmap"
+	"github.com/cilium/cilium/pkg/time"
 
 	fakeauthmap "github.com/cilium/cilium/pkg/maps/authmap/fake"
 	fakesignalmap "github.com/cilium/cilium/pkg/maps/signalmap/fake"
